@@ -1,0 +1,37 @@
+[
+  {
+    "cpf": "111.222.333-44",
+    "dataNascimento": "2000-05-15",
+    "nomeMae": "Maria da Silva",
+    "matricula": "20230001",
+    "nome": "João Silva"
+  },
+  {
+    "cpf": "222.333.444-55",
+    "dataNascimento": "2001-07-22",
+    "nomeMae": "Ana Oliveira",
+    "matricula": "20230002",
+    "nome": "Pedro Oliveira"
+  },
+  {
+    "cpf": "333.444.555-66",
+    "dataNascimento": "1999-11-30",
+    "nomeMae": "Claudia Santos",
+    "matricula": "20230003",
+    "nome": "Ana Santos"
+  },
+  {
+    "cpf": "444.555.666-77",
+    "dataNascimento": "2002-03-10",
+    "nomeMae": "Fernanda Costa",
+    "matricula": "20230004",
+    "nome": "Carlos Costa"
+  },
+  {
+    "cpf": "555.666.777-88",
+    "dataNascimento": "2000-09-18",
+    "nomeMae": "Patricia Souza",
+    "matricula": "20230005",
+    "nome": "Mariana Souza"
+  }
+]
