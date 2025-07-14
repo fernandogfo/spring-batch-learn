@@ -16,5 +16,9 @@ public class AlunosSistemaExternoDTO {
     private String matricula;
     private LocalDate dataNascimento;
     private String nome;
+    private boolean endMarker = false;
 
+    public AlunosSistemaExternoDTO(boolean endMarker) {
+        this.endMarker = endMarker;
+    }
 }

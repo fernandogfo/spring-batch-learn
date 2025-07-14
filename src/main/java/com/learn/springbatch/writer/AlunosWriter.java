@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Configuration
 @RequiredArgsConstructor
 public class AlunosWriter implements ItemWriter<AlunosSistemaExternoDTO> {
 

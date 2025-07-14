@@ -10,6 +10,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiResponseDTO {
-
+    private int page;
+    private int size;
+    private int totalPages;
     private List<AlunosSistemaExternoDTO> data;
 }

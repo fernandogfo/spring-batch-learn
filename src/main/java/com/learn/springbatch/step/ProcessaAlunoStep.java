@@ -1,9 +1,10 @@
 package com.learn.springbatch.step;
 
 import com.learn.springbatch.client.ExternalApiClient;
+import com.learn.springbatch.component.AlunoConsultaBatch;
 import com.learn.springbatch.dto.AlunosSistemaExternoDTO;
-import com.learn.springbatch.partitioner.AlunoPartitioner;
 import com.learn.springbatch.reader.PagedAlunoItemReader;
+import com.learn.springbatch.writer.AlunosWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -11,12 +12,14 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @RequiredArgsConstructor
@@ -24,43 +27,49 @@ public class ProcessaAlunoStep {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
-    private final ItemReader<AlunosSistemaExternoDTO> reader;
-    private final ItemWriter<AlunosSistemaExternoDTO> writer;
+    private final AlunoConsultaBatch consultaBatch;
+    private final ExternalApiClient externalApiClient;
 
-    @Bean
-    public ThreadPoolTaskExecutor taskExecutor() {
+    @Bean("asyncWriterAlunoExecutor")
+    public TaskExecutor writerTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2); // controla quantas threads simultâneas
-        executor.setMaxPoolSize(2);// controla o máximo de threads
-        executor.setQueueCapacity(10); // rejeita se passar do limite
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(6);
         executor.setThreadNamePrefix("processa-aluno-thread-");
-
-        // ThreadFactory personalizada com logs
-        executor.setThreadFactory(r -> {
-            Thread thread = new Thread(r);
-            thread.setName("processa-aluno-thread-" + thread.getId());
-            System.out.println("Thread criada: " + thread.getName());
-            return thread;
-        });
-
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }
 
     @Bean
-    public Step processaAlunosStep() {
+    public Step processaAlunosStep(ItemReader<AlunosSistemaExternoDTO> pagedAlunoReader,
+                                   ItemWriter<AlunosSistemaExternoDTO> alunosWriter) {
         return new StepBuilder("processaAlunosStep", jobRepository)
-                .<AlunosSistemaExternoDTO, AlunosSistemaExternoDTO>chunk(1, transactionManager)
-                .reader(reader)
-                //.writer(writer)
+                .<AlunosSistemaExternoDTO, AlunosSistemaExternoDTO>chunk(10, transactionManager) // Aumente o chunk size
+                .reader(pagedAlunoReader)
                 .writer(items -> {
-                    System.out.println(
-                            "Thread: " + Thread.currentThread().getName() +
-                                    " | Processando chunk de " + items.size() + " itens" + items.getItems().get(0).getNome()
-                    );
-                    writer.write(items);
+                    System.out.println(Thread.currentThread().getName() +
+                            " | Processando " + items.size() + " itens");
+                    alunosWriter.write(items);
                 })
-                .taskExecutor(taskExecutor())
+                .taskExecutor(writerTaskExecutor())
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(100)
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public ItemReader<AlunosSistemaExternoDTO> pagedAlunoReader(
+            ExternalApiClient apiClient,
+            @Value("#{jobParameters['pageSize']}") Integer pageSize) {
+        return new PagedAlunoItemReader(apiClient, pageSize != null ? pageSize : 2);
+    }
+
+    @Bean
+    public ItemWriter<AlunosSistemaExternoDTO> alunosWriter() {
+        return new AlunosWriter(consultaBatch);
     }
 }

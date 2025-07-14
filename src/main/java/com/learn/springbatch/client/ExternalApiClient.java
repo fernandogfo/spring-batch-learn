@@ -1,14 +1,13 @@
 package com.learn.springbatch.client;
 
-import com.learn.springbatch.dto.AlunosSistemaExternoDTO;
 import com.learn.springbatch.dto.ApiResponseDTO;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-@Component
+@Service
 public class ExternalApiClient {
 
     private final RestTemplate restTemplate;
@@ -17,24 +16,29 @@ public class ExternalApiClient {
         this.restTemplate = builder.build();
     }
 
-    public AlunosSistemaExternoDTO getPage(int pageNumber) {
-        String url = "https://spring-batch-learn.free.beeceptor.com/users?page=" + pageNumber + "&size=2";
-        System.out.println("Chamando endpoint: " + url);
+    public ApiResponseDTO getPage(int pageNumber, int pageSize) {
+        String url = String.format("https://spring-batch-learn.free.beeceptor.com/users?page=%d&size=%d",
+                pageNumber, pageSize);
 
-        ResponseEntity<ApiResponseDTO> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                null,
-                ApiResponseDTO.class
-        );
+        System.out.println("Chamando API: " + url);
 
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            // Pegando o primeiro resultado da página fictícia (ajuste conforme seu JSON real)
-            ApiResponseDTO apiResponse = response.getBody();
-            if (!apiResponse.getData().isEmpty()) {
-                return apiResponse.getData().get(0);
+        ResponseEntity<ApiResponseDTO> response;
+        try {
+            response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    ApiResponseDTO.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
             }
+
+            throw new RuntimeException("API retornou status: " + response.getStatusCode());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao chamar API: " + e.getMessage(), e);
         }
-        return null;
     }
 }
